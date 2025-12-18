@@ -21,44 +21,6 @@ A Django REST Framework based Task Manager with JWT authentication and Role-Base
 - Simple JWT for authentication
 - SQLite (default Django database)
 
-## Project Structure
-task_manager/
-├── config/                    # Main Django project configuration
-│   ├── __init__.py
-│   ├── settings.py                  # Django settings, JWT config, REST framework settings
-│   ├── urls.py                      # Root URL configurations (includes /api/ routes)
-│   ├── asgi.py                      # ASGI config (optional)
-│   └── wsgi.py                      # WSGI application entry point
-│
-├── app/                           # Main application
-│   ├── __init__.py
-│   ├── admin.py                     # Django admin configuration for Task model
-│   ├── apps.py                      # App configuration (TasksConfig)
-│   ├── models.py                    # Database models (Task model)
-│   ├── views.py                     # API views (TaskViewSet, registration view)
-│   ├── serializers.py               # DRF serializers (UserSerializer, TaskSerializer)
-│   ├── urls.py                      # App URL routes (all /api/ endpoints)
-│   ├── permissions.py               # Custom permission classes (IsOwnerOrAdmin)
-│   ├── tests.py                     # Unit tests for models, authentication, RBAC
-│   │
-│   ├── migrations/                  # Database migrations
-│   │   ├── __init__.py
-│   │   ├── 0001_initial.py         # Initial migration for Task model
-│   │   └── ...                     # Other migration files
-│   │
-│   └── management/                  # Custom management commands
-│       ├── __init__.py
-│       └── commands/
-│           ├── __init__.py
-│           └── setup_roles.py       # Command to create Admin/User groups and test users
-│
-├── db.sqlite3                       # SQLite database file (auto-generated)
-├── manage.py                        # Django management script
-├── requirements.txt                 # Python dependencies (Django, DRF, Simple JWT)
-├── README.md                        # Project documentation
-├── .gitignore                       # Git ignore file
-└── .env.example                     # Example environment variables (optional)
-
 ## Installation & Setup
 
 ### 1. Clone the Repository
@@ -199,7 +161,8 @@ curl -X PUT http://localhost:8000/api/tasks/1/ \
 ```
 
 ### 6. Delete Task
-```bashcurl -X DELETE http://localhost:8000/api/tasks/1/ \
+```bash
+curl -X DELETE http://localhost:8000/api/tasks/1/ \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -239,18 +202,25 @@ curl -X GET http://localhost:8000/api/tasks/ \
 ### Error	Solution
 
 401: Authentication credentials were not provided	------------> Add Authorization: Bearer <token> header
+
 401: Given token not valid ------------>	Token expired. Login again
+
 404: Not found ------------>	Task doesn't exist OR no permission
+
 400: Bad Request ------------>	Check JSON format in request body
 
-### 🐳 Docker (Optional)
-```bash
-# Build and run
-docker build -t Task-Manager-API .
-docker run -p 8000:8000 task-manager
+### 🐳 Docker
 
-# Or with compose
-docker-compose up
+### dockerfile
+```bash
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN python manage.py collectstatic --noinput
+EXPOSE 8000
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 ```
 
 ### For Testing Purpose, use predefined admin and users:
