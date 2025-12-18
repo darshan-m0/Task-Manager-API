@@ -23,21 +23,41 @@ A Django REST Framework based Task Manager with JWT authentication and Role-Base
 
 ## Project Structure
 task_manager/
-├── task_manager/ # Main project settings
-│ ├── settings.py # Project configuration
-│ ├── urls.py # URL routing
-│ └── wsgi.py # WSGI config
-├── tasks/ # Main application
-│ ├── models.py # Database models
-│ ├── views.py # API views
-│ ├── serializers.py # Data serializers
-│ ├── permissions.py # Custom permissions
-│ ├── urls.py # App URLs
-│ ├── admin.py # Django admin
-│ └── tests.py # Unit tests
-├── manage.py # Django management script
-├── requirements.txt # Python dependencies
-└── README.md # This file
+├── config/                    # Main Django project configuration
+│   ├── __init__.py
+│   ├── settings.py                  # Django settings, JWT config, REST framework settings
+│   ├── urls.py                      # Root URL configurations (includes /api/ routes)
+│   ├── asgi.py                      # ASGI config (optional)
+│   └── wsgi.py                      # WSGI application entry point
+│
+├── app/                           # Main application
+│   ├── __init__.py
+│   ├── admin.py                     # Django admin configuration for Task model
+│   ├── apps.py                      # App configuration (TasksConfig)
+│   ├── models.py                    # Database models (Task model)
+│   ├── views.py                     # API views (TaskViewSet, registration view)
+│   ├── serializers.py               # DRF serializers (UserSerializer, TaskSerializer)
+│   ├── urls.py                      # App URL routes (all /api/ endpoints)
+│   ├── permissions.py               # Custom permission classes (IsOwnerOrAdmin)
+│   ├── tests.py                     # Unit tests for models, authentication, RBAC
+│   │
+│   ├── migrations/                  # Database migrations
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py         # Initial migration for Task model
+│   │   └── ...                     # Other migration files
+│   │
+│   └── management/                  # Custom management commands
+│       ├── __init__.py
+│       └── commands/
+│           ├── __init__.py
+│           └── setup_roles.py       # Command to create Admin/User groups and test users
+│
+├── db.sqlite3                       # SQLite database file (auto-generated)
+├── manage.py                        # Django management script
+├── requirements.txt                 # Python dependencies (Django, DRF, Simple JWT)
+├── README.md                        # Project documentation
+├── .gitignore                       # Git ignore file
+└── .env.example                     # Example environment variables (optional)
 
 ## Installation & Setup
 
@@ -112,6 +132,126 @@ Server runs at: http://localhost:8000/
 - 🔒 = Requires JWT Token
 - Admin: Can access all tasks
 - User: Can only access own tasks
+
+## 🔐 Authentication Endpoints
+
+### 1. Register User
+```bash
+curl -X POST http://localhost:8000/api/auth/register/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "john", "password": "john123", "password2": "john123", "email": "john@example.com"}'
+```
+
+### 2. Login (Get Tokens)
+```bash
+curl -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "john", "password": "john123"}'
+```
+
+##### Response:
+```bash
+{
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+}
+```
+
+### 3. Refresh Token
+```bash
+curl -X POST http://localhost:8000/api/auth/refresh/ \
+  -H "Content-Type: application/json" \
+  -d '{"refresh": "your_refresh_token"}'
+```
+
+## 📝 Task Management (All Need Token)
+
+### Header for all task requests:
+```text
+Authorization: Bearer <your_access_token>
+Content-Type: application/json
+```
+
+### 1. Create Task
+```bash
+curl -X POST http://localhost:8000/api/tasks/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"title": "My Task", "description": "Task details", "status": false}'
+```
+
+### 2. Get All Tasks
+```bash
+curl -X GET http://localhost:8000/api/tasks/ \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### 3. Get Specific Task
+```bash
+curl -X GET http://localhost:8000/api/tasks/1/ \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### 4. Update Task
+```bash
+curl -X PUT http://localhost:8000/api/tasks/1/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"title": "Updated", "description": "New details", "status": true}'
+```
+
+### 6. Delete Task
+```bashcurl -X DELETE http://localhost:8000/api/tasks/1/ \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### 7. Toggle Complete/Incomplete
+```bash
+curl -X POST http://localhost:8000/api/tasks/1/toggle_status/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{}'
+```
+
+## 👑 RBAC - Admin vs User
+
+### Admin User:
+```bash
+# Login as admin (created by setup_roles)
+curl -X POST http://localhost:8000/api/auth/login/ \
+  -d '{"username": "admin", "password": "admin123"}'
+
+# Admin sees ALL tasks from ALL users
+curl -X GET http://localhost:8000/api/tasks/ \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+### Regular User:
+```bash
+# Login as user
+curl -X POST http://localhost:8000/api/auth/login/ \
+  -d '{"username": "user", "password": "user123"}'
+
+# User sees ONLY own tasks
+curl -X GET http://localhost:8000/api/tasks/ \
+  -H "Authorization: Bearer USER_TOKEN"
+```
+
+## ⚠️ Common Errors
+
+### Error	Solution
+
+401: Authentication credentials were not provided	------------> Add Authorization: Bearer <token> header
+401: Given token not valid ------------>	Token expired. Login again
+404: Not found ------------>	Task doesn't exist OR no permission
+400: Bad Request ------------>	Check JSON format in request body
+
+### 🐳 Docker (Optional)
+```bash
+# Build and run
+docker build -t Task-Manager-API .
+docker run -p 8000:8000 task-manager
+
+# Or with compose
+docker-compose up
+```
 
 ### For Testing Purpose, use predefined admin and users:
 username:admin
